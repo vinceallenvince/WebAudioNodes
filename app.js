@@ -14,6 +14,10 @@ io.sockets.on('connection', function(socket) {
     socket.emit('powerButton');
   });
 
+  emitter.on('potFilterFreq', function(data) {
+    socket.emit('potFilterFreq', data);
+  });
+
   emitter.on('potGain', function(data) {
     socket.emit('potGain', data);
   });
@@ -29,12 +33,13 @@ io.sockets.on('connection', function(socket) {
 
 // connect to potentiometer via Johnny-five
 var five = require("johnny-five"),
-  board, powerButton, potOscA, potOscB;
+  board, powerButton, potOscA, potOscB, potGain, potFilterFreq;
 
 var powerButtonPin = 8,
     potGainPin = "A0",
     potOscAPin = "A2",
-    potOscBPin = "A4";
+    potOscBPin = "A4",
+    potFilterFreqPin = "A5";
 
 board = new five.Board();
 
@@ -46,6 +51,18 @@ board.on("ready", function() {
   // Button Events
   powerButton.on("up", function() {
     emitter.emit('powerButton');
+  });
+
+
+  // FilterFreq POTENTIOMETER
+  potFilterFreq = new five.Sensor({
+    pin: potFilterFreqPin,
+    freq: 10
+  });
+
+  // potentiometer events
+  potFilterFreq.on("data", function() {
+    emitter.emit('potFilterFreq', this.value);
   });
 
 

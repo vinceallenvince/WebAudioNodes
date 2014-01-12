@@ -19,26 +19,13 @@
     <script src='scripts/audio.js'></script>
     <script type="text/javascript">
 
-      var OscA = new AudioMods.Oscillator(),
+      var Gain = new AudioMods.Gain(),
+          OscA = new AudioMods.Oscillator(),
           OscB = new AudioMods.Oscillator(),
-          Gain = new AudioMods.Gain();
+          Convolver = new AudioMods.Convolver(),
+          Delay = new AudioMods.Delay(),
+          BiquadFilter = new AudioMods.BiquadFilter();
 
-      // should return different effects based on button clicks
-      var Convolver = AudioMods.audio_context.createConvolver(),
-          noiseBuffer = AudioMods.audio_context.createBuffer(2, 2 * AudioMods.audio_context.sampleRate, AudioMods.audio_context.sampleRate),
-          left = noiseBuffer.getChannelData(0),
-          right = noiseBuffer.getChannelData(1);
-
-      for (var i = 0; i < noiseBuffer.length; i++) {
-          left[i] = Math.random() * 2 - 1;
-          right[i] = Math.random() * 2 - 1;
-      }
-      Convolver.buffer = noiseBuffer;
-
-      // DELAY
-
-      var Delay = AudioMods.audio_context.createDelay();
-      Delay.delayTime = 1;
 
       var socket = io.connect('http://localhost:1337');
 
@@ -88,21 +75,29 @@
         socket.on('powerButton', function() {
           OscA.toggle();
           OscB.toggle();
-
+          Convolver.setEffect(2);
+          Delay.setDelay(0);
+          BiquadFilter.changeFrequency(350);
 
           AudioMods.connect(Gain.node, AudioMods.audio_context.destination);
-          AudioMods.connect(Delay, Gain.node);
-          AudioMods.connect(Convolver, Delay);
-          AudioMods.connect(OscA.osc, Convolver);
-          AudioMods.connect(OscB.osc, Convolver);
+          AudioMods.connect(BiquadFilter.node, Gain.node);
+          AudioMods.connect(Delay.node, BiquadFilter.node);
+          AudioMods.connect(Convolver.node, Delay.node);
+          AudioMods.connect(OscA.osc, Convolver.node);
+          AudioMods.connect(OscB.osc, Convolver.node);
+        });
+
+        socket.on('potFilterFreq', function(data) {
+          var val = map(data, 0, 1023, 10, AudioMods.audio_context.sampleRate / 2);
+          if (BiquadFilter.node) {
+            BiquadFilter.changeFrequency(val);
+          }
         });
 
         socket.on('potGain', function(data) {
           var val = map(data, 0, 1023, 0, 1);
-          //potA.angle = angle;
           if (Gain.node) {
             Gain.changeGain(val);
-            console.log(val);
           }
         });
 
